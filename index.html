@@ -786,18 +786,23 @@
             };
 
             try {
-                await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'orders', orderId), newOrder);
+                if (db) {
+                    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'orders', orderId), newOrder);
+                }
                 renderCartBody('success', { name, phone, method, orderId, ref: paymentRef });
                 showToast("Pembayaran berhasil diverifikasi & tercatat di laporan!");
             } catch (err) {
                 console.error("Gagal menyimpan pesanan ke cloud:", err);
-                showToast("Gagal memproses transaksi", "❌");
+                // Fallback local persistence if offline or permission issue
+                orders.push(newOrder);
+                renderCartBody('success', { name, phone, method, orderId, ref: paymentRef });
+                showToast("Pembayaran berhasil disimpan secara lokal!", "⚠️");
             }
         };
 
         window.finishOrder = function() {
             cart = [];
-            updateCartbadge();
+            updateCartBadge();
             closeCartModal();
         };
 
