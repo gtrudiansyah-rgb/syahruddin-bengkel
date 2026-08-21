@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BengkelPro Enterprise - Toko Sparepart, Dasbor Admin & Laporan Keuangan</title>
+    <title>BengkelPro Enterprise - Toko Sparepart, Dasbor Admin & Laporan Keuangan Cloud</title>
     <!-- Tailwind CSS Script -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google Fonts Inter -->
@@ -21,7 +21,7 @@
                 <span class="font-bold text-sm sm:text-lg tracking-tight bg-gradient-to-r from-rose-400 to-orange-400 bg-clip-text text-transparent truncate max-w-[120px] sm:max-w-none">BengkelPro</span>
             </div>
             <div class="flex items-center space-x-1.5 sm:space-x-3">
-                <span id="sync-status" class="text-[10px] sm:text-[11px] bg-slate-800 text-emerald-400 px-2 py-1 rounded-xl border border-slate-700 hidden md:inline-block">🟢 Cloud Terhubung</span>
+                <span id="sync-status" class="text-[10px] sm:text-[11px] bg-slate-800 text-emerald-400 px-2.5 py-1 rounded-xl border border-slate-700 hidden md:inline-block">🟢 Cloud Sinkron Aktif</span>
                 
                 <div class="bg-slate-800 p-0.5 sm:p-1 rounded-xl border border-slate-700 flex space-x-0.5 text-[11px] sm:text-xs font-semibold">
                     <button onclick="switchView('store')" id="nav-store-btn" class="px-2.5 sm:px-3.5 py-1.5 rounded-lg transition bg-indigo-600 text-white">🛍️ <span class="hidden xs:inline">Toko</span></button>
@@ -70,8 +70,8 @@
             <div class="bg-white p-4 sm:p-6 rounded-2xl sm:rounded-3xl border border-slate-200 shadow-sm overflow-x-hidden">
                 <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 border-b border-slate-100 pb-4 mb-6">
                     <div>
-                        <h3 class="text-base sm:text-lg font-bold text-slate-900">📊 Laporan Trafik & Analitik Pembayaran</h3>
-                        <p class="text-[11px] sm:text-xs text-slate-500">Filter transaksi berdasarkan rentang tanggal untuk rekap pendapatan bengkel.</p>
+                        <h3 class="text-base sm:text-lg font-bold text-slate-900">📊 Laporan Trafik & Analitik Pembayaran Cloud</h3>
+                        <p class="text-[11px] sm:text-xs text-slate-500">Filter transaksi berdasarkan rentang tanggal untuk rekap pendapatan bengkel secara real-time.</p>
                     </div>
                     <div class="flex flex-wrap items-center gap-2 w-full lg:w-auto">
                         <div class="flex items-center space-x-1.5 text-xs w-full sm:w-auto">
@@ -272,6 +272,7 @@
         <p>&copy; 2026 BengkelPro Enterprise & Firebase Cloud Database Sync. All rights reserved.</p>
     </footer>
 
+    <!-- Firebase SDK & App Logic -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
@@ -292,7 +293,7 @@
         let orders = [];
         let cart = [];
         let activeProduct = null;
-        let isAdminLoggedIn = false; // Status login admin
+        let isAdminLoggedIn = false;
 
         const defaultProducts = [
             { id: "prod-1", name: "Oli Mesin Matic 10W-40 (1L)", category: "Oli & Pelumas", description: "Oli sintetis tahan panas tinggi, mesin lebih awet dan bertenaga untuk harian.", price: 65000, stock: 20, icon: "🛢️" },
@@ -316,9 +317,11 @@
                 }
                 userId = auth.currentUser?.uid || crypto.randomUUID();
 
+                document.getElementById('sync-status').innerHTML = "🟢 Cloud Terhubung";
                 setupRealtimeListeners();
             } catch (err) {
                 console.warn("Cloud connection fallback to local state:", err);
+                document.getElementById('sync-status').innerHTML = "⚠️ Mode Offline (Lokal)";
                 products = defaultProducts;
                 renderProducts();
                 updateCartBadge();
@@ -326,6 +329,7 @@
         }
 
         function setupRealtimeListeners() {
+            // Menerapkan aturan jalur koleksi publik Firebase standar artifacts/{appId}/public/data/{collectionName}
             const productsCol = collection(db, 'artifacts', appId, 'public', 'data', 'products');
             const ordersCol = collection(db, 'artifacts', appId, 'public', 'data', 'orders');
 
@@ -386,7 +390,6 @@
             }
         };
 
-        // Fungsi saat tombol navigasi Dasbor Admin diklik
         window.handleAdminNavClick = function() {
             if (isAdminLoggedIn) {
                 switchView('admin');
@@ -408,7 +411,6 @@
         window.verifyAdminLogin = function(e) {
             e.preventDefault();
             const pin = document.getElementById('admin-pin-input').value;
-            // PIN Default untuk Admin adalah "1234"
             if (pin === "1234") {
                 isAdminLoggedIn = true;
                 closeAdminLoginModal();
@@ -571,7 +573,7 @@
                 </tr>
             `).join('');
 
-            // Order Table with Detailed Payment Info
+            // Order Table
             const ordTable = document.getElementById('admin-order-table-body');
             ordTable.innerHTML = filteredOrders.map(o => {
                 const dateStr = o.createdAt ? new Date(o.createdAt).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' }) : 'Baru saja';
@@ -745,7 +747,7 @@
                         <p class="text-xs text-slate-500 mb-4">Pesanan <strong class="text-indigo-600">${extraData.orderId}</strong> via <strong class="text-slate-800">${extraData.method}</strong> (Ref: ${extraData.ref}) telah tercatat dalam laporan keuangan cloud.</p>
                         <div class="bg-slate-50 border border-slate-200 p-4 rounded-xl text-left mb-6">
                             <p class="text-[11px] text-slate-400 mb-1">Status Keuangan:</p>
-                            <p class="text-xs font-bold text-emerald-600 mb-2">🟢 Dana Masuk & Terverifikasi</p>
+                            <p class="text-xs font-bold text-emerald-600 mb-2">🟢 Dana Masuk & Terverifikasi Cloud</p>
                             <p class="text-[11px] text-slate-600">Admin akan menyiapkan sparepart dan menghubungi WhatsApp <strong class="text-slate-800">${extraData.phone}</strong>.</p>
                         </div>
                         <button onclick="finishOrder()" class="w-full bg-slate-900 text-white text-xs font-bold py-3 rounded-xl shadow-md">Selesai & Reset Keranjang</button>
@@ -790,13 +792,12 @@
                     await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'orders', orderId), newOrder);
                 }
                 renderCartBody('success', { name, phone, method, orderId, ref: paymentRef });
-                showToast("Pembayaran berhasil diverifikasi & tercatat di laporan!");
+                showToast("Pembayaran berhasil diverifikasi & tercatat di Cloud!");
             } catch (err) {
                 console.error("Gagal menyimpan pesanan ke cloud:", err);
-                // Fallback local persistence if offline or permission issue
                 orders.push(newOrder);
                 renderCartBody('success', { name, phone, method, orderId, ref: paymentRef });
-                showToast("Pembayaran berhasil disimpan secara lokal!", "⚠️");
+                showToast("Pembayaran disimpan lokal (Offline)", "⚠️");
             }
         };
 
